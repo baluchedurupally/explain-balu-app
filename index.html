@@ -268,6 +268,7 @@
       // Build payload with either text or file (multipart)
        const langCode = document.getElementById("language").value; // ✅ en/te/hi/ta
        const cat = document.getElementById("category")?.value || null;
+       const pastedText = document.getElementById("textInput")?.value?.trim() || "";
 
       // If file -> multipart
       if (fileInput.files && fileInput.files.length > 0) {
