@@ -242,15 +242,7 @@
     // Minimal Razorpay loader (optional). If you prefer payment-link/QR first, skip this entirely.
     async function loadRazorpayScript() {
 
-        if (SKIP_PAYMENT_FOR_NOW) {
-            setStep("status");
-            statusText.textContent = "Processing document…";
-            const result = await processDoc("token_stub_paid");
-            renderResult(result);
-            setStep("result");
-            return;
-            }
-
+        
       return new Promise((resolve, reject) => {
         if (window.Razorpay) return resolve(true);
         const s = document.createElement("script");
@@ -333,13 +325,14 @@
         // If you're not ready for Razorpay order flow yet:
         // You can temporarily skip payment and use a hardcoded token from backend.
         // But keep UI same.
+        /*
         await loadRazorpayScript();
 
         const order = await createOrder();
 
         // Open Razorpay Checkout
         statusText.textContent = "Waiting for payment…";
-
+        
         const rzp = new window.Razorpay({
           key: order.keyId,
           amount: order.amount,
@@ -351,6 +344,16 @@
             // response contains razorpay_payment_id, razorpay_order_id, razorpay_signature
             // Your backend should verify signature and mint paymentToken.
             try {
+
+              if (SKIP_PAYMENT_FOR_NOW) {
+                setStep("status");
+                statusText.textContent = "Processing document…";
+                const result = await processDoc("token_stub_paid");
+                renderResult(result);
+                setStep("result");
+                return;
+                }
+
               statusText.textContent = "Verifying payment…";
               const verifyRes = await fetch(`${API_BASE}/verify-payment`, {
                 method: "POST",
@@ -379,9 +382,22 @@
             }
           },
           theme: { color: "#0f172a" }
-        });
+        }); 
 
         rzp.open();
+        */
+
+        // For now, skip payment and use a hardcoded token from backend.
+        if (SKIP_PAYMENT_FOR_NOW) {
+          setStep("status");
+          statusText.textContent = "Processing document…";
+          const result = await processDoc("token_stub_paid");
+          renderResult(result);
+          setStep("result");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+
       } catch (e) {
         console.error(e);
         setStep("input");
