@@ -1,0 +1,23 @@
+{
+  "name": "explain-balu-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baluchedurupally/explain-balu-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/baluchedurupally/explain-balu-app/issues"
+  },
+  "homepage": "https://github.com/baluchedurupally/explain-balu-app#readme",
+  "description": "",
+  "devDependencies": {
+    "tailwindcss": "^4.1.18"
+  }
+}
