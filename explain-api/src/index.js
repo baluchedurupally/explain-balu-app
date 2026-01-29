@@ -1,12 +1,7 @@
-const MODEL = "@cf/meta/llama-3.1-8b-instruct-fast"; // supports JSON mode :contentReference[oaicite:2]{index=2}
+const MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 function resolveLanguage(code) {
-  const map = {
-    en: "English",
-    te: "Telugu",
-    hi: "Hindi",
-    ta: "Tamil"
-  };
+  const map = { en: "English", te: "Telugu", hi: "Hindi", ta: "Tamil" };
   return map[code] || "English";
 }
 
@@ -27,22 +22,37 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
 
-    // ✅ LLM-powered explanation
+    // ----------------------------
+    // LLM-powered document explain
+    // ----------------------------
     if (url.pathname === "/process-doc" && request.method === "POST") {
       let body = {};
       try { body = await request.json(); } catch {}
 
-      const paymentToken = body.paymentToken || body.token || "";
+      const paymentToken = (body.paymentToken || "").trim();
       const text = (body.text || "").trim();
       const outputLangCode = (body.outputLanguage || "en").trim();
-	  const outputLanguage = resolveLanguage(outputLangCode);
+      const outputLanguage = resolveLanguage(outputLangCode);
       const category = (body.category || "auto").trim();
 
-      // For now: minimal check; later we’ll verify real payments
-      if (!paymentToken) return json({ error: "Missing payment token" }, 401, corsHeaders);
-      if (!text) return json({ error: "No document text provided (OCR coming next)." }, 400, corsHeaders);
+      if (!paymentToken) {
+        return json({ error: "Missing payment token" }, 401, corsHeaders);
+      }
+      if (!text) {
+        return json(
+          { error: "No document text provided. (OCR not enabled yet.)" },
+          400,
+          corsHeaders
+        );
+      }
+
+      // ✅ Debug visibility (temporary)
+      console.log("AI binding exists:", !!env.AI);
+      console.log("Requested language:", outputLangCode, "=>", outputLanguage);
 
       const schema = {
         type: "object",
@@ -115,36 +125,38 @@ OUTPUT FORMAT:
 - You MUST follow the provided JSON schema exactly.
 - Do not include extra fields, commentary, or explanations outside the schema.
 
-- Output language: ${outputLanguage}
-- Category hint: ${category}`;
+Output language: ${outputLanguage}
+Category hint: ${category}
+
+Return JSON exactly matching the schema.`;
 
       const user = `Document text:
 """${text}"""`;
 
       try {
+        if (!env.AI) {
+          // If AI binding isn't available, return a clear error
+          return json({ error: "Workers AI binding not configured." }, 500, corsHeaders);
+        }
+
         const aiResp = await env.AI.run(MODEL, {
           messages: [
             { role: "system", content: system },
             { role: "user", content: user }
           ],
-          response_format: {
-            type: "json_schema",
-            json_schema: schema
-          }
+          response_format: { type: "json_schema", json_schema: schema }
         });
 
-        // Workers AI returns { response: { ...your json... } } in JSON mode examples :contentReference[oaicite:3]{index=3}
         const result = aiResp?.response ?? aiResp;
-
         return json(result, 200, corsHeaders);
       } catch (e) {
-        // JSON Mode can fail (“JSON Mode couldn't be met”), so we must handle it :contentReference[oaicite:4]{index=4}
+        console.log("AI error:", e?.message || String(e));
         return json(
           {
-            what: "I couldn’t reliably format the explanation this time.",
-            seriousness: { level: "LOW", text: "This looks like a formatting/processing issue, not your document." },
-            next: "Please try again. If it repeats, paste a shorter excerpt (top section + key numbers/dates).",
-            noWorry: "Your upload/payment is not the problem. This is a temporary processing limitation."
+            what: "The document was received, but an AI formatting error occurred.",
+            seriousness: { level: "LOW", text: "The document does not clearly say anything urgent here." },
+            next: "Please try again with a shorter excerpt (top section + key numbers/dates).",
+            noWorry: "This is a processing issue. The document does not clearly say more in the excerpt provided."
           },
           200,
           corsHeaders
