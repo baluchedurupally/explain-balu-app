@@ -266,20 +266,26 @@
 
     async function processDoc(paymentToken) {
       // Build payload with either text or file (multipart)
-      const lang = language.value;
-      const cat = category.value || null;
+       const langCode = document.getElementById("language").value; // ✅ en/te/hi/ta
+       const cat = document.getElementById("category")?.value || null;
 
       // If file -> multipart
       if (fileInput.files && fileInput.files.length > 0) {
         const fd = new FormData();
-        fd.append("language", lang);
+        fd.append("language", langCode);
         if (cat) fd.append("category", cat);
         fd.append("paymentToken", paymentToken);
         fd.append("file", fileInput.files[0]);
 
         const res = await fetch(`${API_BASE}/process-doc`, {
           method: "POST",
-          body: fd
+           headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                paymentToken,            // token_stub_paid for now
+                text: pastedText,        // for now LLM works on pasted text
+                outputLanguage:  langCode,
+                category: "auto"
+            })
         });
         if (!res.ok) throw new Error("Processing failed");
         return res.json();
@@ -290,7 +296,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          language: lang,
+          language: langCode,
           category: cat,
           paymentToken,
           text: (textInput.value || "").trim()
