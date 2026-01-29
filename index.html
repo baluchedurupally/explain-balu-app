@@ -265,7 +265,9 @@
     }
 
     async function processDoc(paymentToken) {
-        console.log("AI binding exists:", !!env.AI);
+       
+        console.log("API_BASE:", API_BASE);
+        console.log("Selected language:", document.getElementById("language").value);
       // Build payload with either text or file (multipart)
        const langCode = document.getElementById("language").value; // ✅ en/te/hi/ta
        const cat = document.getElementById("category")?.value || null;
@@ -290,7 +292,7 @@
             })
         });
         if (!res.ok) throw new Error("Processing failed");
-        console.log("Using LLM path");
+       
         return res.json();
       }
 
