@@ -265,50 +265,57 @@
     }
 
     async function processDoc(paymentToken) {
-       
         console.log("API_BASE:", API_BASE);
-        console.log("Selected language:", document.getElementById("language").value);
-      // Build payload with either text or file (multipart)
-       const langCode = document.getElementById("language").value; // ✅ en/te/hi/ta
-       const cat = document.getElementById("category")?.value || null;
-       const pastedText = document.getElementById("textInput")?.value?.trim() || "";
 
-      // If file -> multipart
-      if (fileInput.files && fileInput.files.length > 0) {
-        const fd = new FormData();
-        fd.append("language", langCode);
-        if (cat) fd.append("category", cat);
-        fd.append("paymentToken", paymentToken);
-        fd.append("file", fileInput.files[0]);
+        const langCode = document.getElementById("language").value; // en/te/hi/ta
+        const cat = document.getElementById("category")?.value || "auto";
+        const pastedText = document.getElementById("textInput")?.value?.trim() || "";
+
+        console.log("Selected language:", langCode);
+
+        // ---------- FILE UPLOAD (multipart) ----------
+        if (fileInput.files && fileInput.files.length > 0) {
+            const fd = new FormData();
+            fd.append("paymentToken", paymentToken);
+            fd.append("outputLanguage", langCode);   // ✅ keep same field name as JSON path
+            fd.append("category", cat);
+            fd.append("file", fileInput.files[0]);
+
+            const res = await fetch(`${API_BASE}/process-doc`, {
+            method: "POST",
+            body: fd, // ✅ IMPORTANT: send FormData
+            });
+
+            const raw = await res.text();
+            console.log("process-doc status:", res.status);
+            console.log("process-doc response:", raw);
+
+            if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
+            return JSON.parse(raw);
+        }
+
+        // ---------- TEXT (JSON) ----------
+        if (!pastedText) {
+            throw new Error("Please paste document text for now. (OCR for images is coming next.)");
+        }
 
         const res = await fetch(`${API_BASE}/process-doc`, {
-          method: "POST",
-           headers: { "Content-Type": "application/json" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                paymentToken,            // token_stub_paid for now
-                text: pastedText,        // for now LLM works on pasted text
-                outputLanguage:  langCode,
-                category: "auto"
+            paymentToken,
+            text: pastedText,
+            outputLanguage: langCode,  // ✅ from UI
+            category: cat
             })
         });
-        if (!res.ok) throw new Error("Processing failed");
-       
-        return res.json();
-      }
 
-      // If text -> JSON
-      const res = await fetch(`${API_BASE}/process-doc`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          language: langCode,
-          category: cat,
-          paymentToken,
-          text: (pastedText || "").trim()
-        })
-      });
-      if (!res.ok) throw new Error("Processing failed");
-      return res.json();
+        const raw = await res.text();
+        console.log("process-doc status:", res.status);
+        console.log("process-doc response:", raw);
+
+        if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
+        return JSON.parse(raw);
     }
 
     function renderResult(data) {
